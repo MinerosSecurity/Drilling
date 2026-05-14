@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Perforación - Mineros Nicaragua</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #004d40;
+            --accent: #deff9a;
+            --secondary: #00bbff;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --teal: #00bfa5;
+            --red: #ef5350;
+            --border: rgba(222, 255, 154, 0.1);
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Urbanist', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            margin: 0; 
+        }
+
+        header { 
+            background: linear-gradient(90deg, var(--primary), #002d26); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            border-bottom: 4px solid var(--accent);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px;
+        }
+
+        .header-title h1 { margin: 0; font-size: 24px; font-weight: 800; }
+        .header-title h1 span { color: var(--accent); }
+
+        .status-bar {
+            background: rgba(255,255,255,0.03); 
+            padding: 12px 20px; 
+            border-radius: 10px;
+            border: 1px solid var(--border); 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            margin-bottom: 20px; 
+            font-size: 13px;
+        }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
+        .dot.online { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .dot.syncing { background: var(--secondary); box-shadow: 0 0 10px var(--secondary); animation: pulse 1.5s infinite; }
+        .dot.error { background: var(--red); box-shadow: 0 0 10px var(--red); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .kpi-card { 
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: 12px; 
+            text-align: center; 
+            border: 1px solid var(--border);
+        }
+        .kpi-value { font-size: 28px; font-weight: 800; color: var(--accent); display: block; }
+        .kpi-label { font-size: 10px; text-transform: uppercase; opacity: 0.7; margin-top: 8px; }
+
+        .panel { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 25px; 
+            border: 1px solid var(--border); 
+            margin-bottom: 20px; 
+        }
+
+        .target-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .target-label { flex: 0 0 180px; font-size: 12px; font-weight: 600; color: #94a3b8; text-align: right; }
+        .target-rail { flex-grow: 1; height: 12px; background: #334155; border-radius: 6px; overflow: hidden; }
+        .target-fill { height: 100%; background: linear-gradient(90deg, #2196f3, var(--secondary)); transition: width 1.5s ease-out; width: 0; }
+        .target-val { flex: 0 0 80px; font-size: 13px; font-weight: 800; color: var(--secondary); }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 15px; font-size: 11px; text-transform: uppercase; color: #94a3b8; border-bottom: 2px solid var(--border); }
+        td { padding: 15px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+        #errorPanel { 
+            background: rgba(239, 83, 80, 0.1); 
+            border: 1px solid var(--red); 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            display: none; 
+            color: #fca5a5;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>CENTRO DE CONTROL <span>H2</span></h1>
+        <h5 id="syncTime">Monitoreo en tiempo real</h5>
+    </div>
+    <div style="text-align: right; font-weight: 800; color: var(--accent);">MINEROS NICARAGUA</div>
+</header>
+
+<div id="errorPanel"></div>
+
+<div class="status-bar">
+    <div id="statusDot" class="dot"></div>
+    <span id="statusMsg">Cargando configuración...</span>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card"><span class="kpi-value" id="kpi-exec">--</span><span class="kpi-label">Ejecutado Mayo</span></div>
+    <div class="kpi-card"><span class="kpi-value" id="kpi-near" style="color:var(--secondary)">--</span><span class="kpi-label">Near Mine</span></div>
+    <div class="kpi-card"><span class="kpi-value" id="kpi-expl" style="color:var(--secondary)">--</span><span class="kpi-label">Exploración</span></div>
+    <div class="kpi-card"><span class="kpi-value" id="kpi-porv" style="color:var(--secondary)">--</span><span class="kpi-label">Porvenir</span></div>
+</div>
+
+<div class="panel" id="targetContainer">
+    <p style="text-align:center; opacity:0.4;">Sincronizando objetivos...</p>
+</div>
+
+<div class="panel" style="padding:0; overflow:hidden;">
+    <table>
+        <thead>
+            <tr><th>Proyecto</th><th>ID Sondeo</th><th>Metros</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="sondeosBody">
+            <tr><td colspan="4" style="text-align:center; padding:40px; opacity:0.4;">Cargando datos...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    /**
+     * CONFIGURACIÓN - REEMPLAZA ESTO
+     */
+    const SHEET_ID = '1-MRXYDaGuGpWSDAtonPFg3OECBkxr6F7'; 
+    const SHEET_NAME = 'TotalMetros'; 
+
+    async function syncDashboard() {
+        const statusMsg = document.getElementById('statusMsg');
+        const statusDot = document.getElementById('statusDot');
+        
+        if (SHEET_ID.includes('TU_ID')) {
+            showError("⚠️ Falta configurar el ID de Google Sheets en el código.");
+            updateStatusUI("Error de ID", "error");
+            return;
+        }
+
+        updateStatusUI("Sincronizando...", "syncing");
+        
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&t=${Date.now()}`;
+
+        try {
+            const response = await fetch(url);
+            const text = await response.text();
+            
+            // Extraer JSON
+            const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+            const data = JSON.parse(jsonString);
+
+            if (data.status === "error") throw new Error(data.errors[0].detailed_message);
+
+            const rows = data.table.rows;
+
+            // KPIs
+            setVal('kpi-exec', rows[1]?.c[1]?.v);
+            setVal('kpi-near', rows[2]?.c[1]?.v);
+            setVal('kpi-expl', rows[3]?.c[1]?.v);
+            setVal('kpi-porv', rows[4]?.c[1]?.v);
+
+            // Targets (Filas 1 a 10, columnas C y D)
+            const targetCont = document.getElementById('targetContainer');
+            targetCont.innerHTML = '<div style="font-weight:800; color:var(--accent); margin-bottom:15px;">AVANCE POR TARGET</div>';
+            for(let i=1; i<10; i++) {
+                const label = rows[i]?.c[2]?.v;
+                const val = parseFloat(rows[i]?.c[3]?.v) || 0;
+                if(label) {
+                    const perc = Math.min((val / 4000) * 100, 100);
+                    targetCont.innerHTML += `
+                        <div class="target-row">
+                            <span class="target-label">${label}</span>
+                            <div class="target-rail"><div class="target-fill" style="width:${perc}%"></div></div>
+                            <span class="target-val">${val.toLocaleString()} m</span>
+                        </div>`;
+                }
+            }
+
+            // Tabla (Desde fila 15)
+            const sondeoBody = document.getElementById('sondeosBody');
+            sondeoBody.innerHTML = '';
+            for(let i=14; i<rows.length; i++) {
+                const proj = rows[i]?.c[0]?.v;
+                const sond = rows[i]?.c[1]?.v;
+                const mets = rows[i]?.c[2]?.v || 0;
+                if(proj && sond) {
+                    sondeoBody.innerHTML += `<tr><td>${proj}</td><td><b>${sond}</b></td><td>${mets.toLocaleString()} m</td><td><span style="color:var(--teal)">● Activo</span></td></tr>`;
+                }
+            }
+
+            updateStatusUI("Sincronizado", "online");
+            document.getElementById('syncTime').innerText = "Actualizado: " + new Date().toLocaleTimeString();
+
+        } catch (err) {
+            showError("❌ Error: " + err.message);
+            updateStatusUI("Error", "error");
+        }
+    }
+
+    function setVal(id, val) {
+        document.getElementById(id).innerText = val ? val.toLocaleString() + " m" : "--";
+    }
+
+    function updateStatusUI(msg, type) {
+        document.getElementById('statusMsg').innerText = msg;
+        document.getElementById('statusDot').className = "dot " + type;
+    }
+
+    function showError(html) {
+        const p = document.getElementById('errorPanel');
+        p.innerHTML = html;
+        p.style.display = 'block';
+    }
+
+    syncDashboard();
+    setInterval(syncDashboard, 180000); // 3 min
+</script>
+</body>
+</html>
